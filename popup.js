@@ -31,13 +31,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('⏳ Step 6: Loading locked folders...');
     await loadLockedFolders();
     
-    console.log('⏳ Step 7: Loading backup settings...');
-    await loadBackupSettings();
-    
-    console.log('⏳ Step 8: Setting up event listeners...');
+    console.log('⏳ Step 7: Setting up event listeners...');
     setupEventListeners();
     
-    console.log('⏳ Step 9: Setting up keyboard shortcuts...');
+    console.log('⏳ Step 8: Setting up keyboard shortcuts...');
     setupKeyboardShortcuts();
     
     console.log('✅ ========== INITIALIZATION COMPLETE ==========');
@@ -1010,40 +1007,24 @@ function setupEventListeners() {
     });
   }
   
-  // Google Sign In/Out
-  const googleSignInBtn = document.getElementById('googleSignInBtn');
-  const googleSignOutBtn = document.getElementById('googleSignOutBtn');
-  
-  if (googleSignInBtn) {
-    googleSignInBtn.addEventListener('click', googleSignIn);
-  }
-  
-  if (googleSignOutBtn) {
-    googleSignOutBtn.addEventListener('click', googleSignOut);
-  }
-  
   // Backup Controls
-  const backupNowBtn = document.getElementById('backupNowBtn');
-  const restoreBtn = document.getElementById('restoreBtn');
-  const autoBackupToggle = document.getElementById('autoBackupToggle');
-  
-  if (backupNowBtn) {
-    backupNowBtn.addEventListener('click', backupToGoogleDrive);
-  }
-  
-  if (restoreBtn) {
-    restoreBtn.addEventListener('click', restoreFromGoogleDrive);
-  }
-
   const downloadBackupBtn = document.getElementById('downloadBackupBtn');
+  const uploadBackupBtn = document.getElementById('uploadBackupBtn');
+  
   if (downloadBackupBtn) {
     downloadBackupBtn.addEventListener('click', downloadBackupFile);
   }
   
-  if (autoBackupToggle) {
-    autoBackupToggle.addEventListener('change', (e) => {
-      toggleAutoBackup(e.target.checked);
+  if (uploadBackupBtn) {
+    uploadBackupBtn.addEventListener('click', () => {
+      document.getElementById('fileInput').click();
     });
+  }
+  
+  // Handle file import
+  const fileInput = document.getElementById('fileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', uploadBackupFile);
   }
   
   // Lock Folder

@@ -1,83 +1,142 @@
-// Authentication and Google Drive Integration
+// Authentication - Email/Password Based
 
 // User state
 let currentUser = null;
-let authToken = null;
+
+// Hash password (simple hash for local storage)
+function hashPassword(password) {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash.toString(16);
+}
 
 // Load user session
 async function loadUserSession() {
-  const result = await chrome.storage.local.get(['user', 'authToken']);
-  if (result.user && result.authToken) {
+  const result = await chrome.storage.local.get(['user']);
+  if (result.user) {
     currentUser = result.user;
-    authToken = result.authToken;
     updateAuthUI(true);
-    document.getElementById('driveSection').style.display = 'block';
   }
 }
 
-// Google Sign In
-async function googleSignIn() {
-  try {
-    // Get OAuth token from Chrome Identity API
-    const token = await new Promise((resolve, reject) => {
-      chrome.identity.getAuthToken({ interactive: true }, (token) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          resolve(token);
-        }
-      });
-    });
+// Sign Up with Email and Password
+async function signUp() {
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const confirmPassword = document.getElementById('signupConfirmPassword').value;
 
-    authToken = token;
-
-    // Get user info from Google
-    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    const userInfo = await userInfoResponse.json();
-    
-    currentUser = {
-      id: userInfo.id,
-      name: userInfo.name,
-      email: userInfo.email,
-      picture: userInfo.picture
-    };
-
-    // Save to storage
-    await chrome.storage.local.set({ user: currentUser, authToken: token });
-
-    updateAuthUI(true);
-    document.getElementById('driveSection').style.display = 'block';
-    showSuccess('Signed in successfully!');
-  } catch (error) {
-    console.error('Sign in failed:', error);
-    showSuccess('Sign in failed. Please try again.');
+  if (!email || !password || !confirmPassword) {
+    showError('Please fill in all fields');
+    return;
   }
-}
 
-// Google Sign Out
-async function googleSignOut() {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showError('Please enter a valid email address');
+    return;
+  }
+
+  if (password.length < 6) {
+    showError('Password must be at least 6 characters');
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    showError('Passwords do not match');
+    return;
+  }
+
   try {
-    if (authToken) {
-      // Revoke token
-      await chrome.identity.removeCachedAuthToken({ token: authToken });
+    // Get all users from storage
+    const result = await chrome.storage.local.get(['users']);
+    const users = result.users || {};
+
+    // Check if user already exists
+    if (users[email]) {
+      showError('Email already registered. Please login instead.');
+      return;
     }
 
+    // Create new user
+    const hashedPassword = hashPassword(password);
+    users[email] = {
+      email: email,
+      password: hashedPassword,
+      createdAt: new Date().toISOString()
+    };
+
+    await chrome.storage.local.set({ users: users });
+
+    // Auto login after signup
+    currentUser = {
+      email: email,
+      createdAt: users[email].createdAt
+    };
+
+    await chrome.storage.local.set({ user: currentUser });
+    updateAuthUI(true);
+    showSuccess('Account created and signed in successfully!');
+    switchAuthTab('login');
+  } catch (error) {
+    console.error('Sign up failed:', error);
+    showError('Sign up failed. Please try again.');
+  }
+}
+
+// Login with Email and Password
+async function login() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email || !password) {
+    showError('Please enter email and password');
+    return;
+  }
+
+  try {
+    const result = await chrome.storage.local.get(['users']);
+    const users = result.users || {};
+
+    if (!users[email]) {
+      showError('Email not found. Please sign up first.');
+      return;
+    }
+
+    const hashedPassword = hashPassword(password);
+    if (users[email].password !== hashedPassword) {
+      showError('Incorrect password');
+      return;
+    }
+
+    currentUser = {
+      email: email,
+      createdAt: users[email].createdAt
+    };
+
+    await chrome.storage.local.set({ user: currentUser });
+    updateAuthUI(true);
+    showSuccess('Signed in successfully!');
+  } catch (error) {
+    console.error('Login failed:', error);
+    showError('Login failed. Please try again.');
+  }
+}
+
+// Sign Out
+async function signOut() {
+  try {
     currentUser = null;
-    authToken = null;
-
-    await chrome.storage.local.remove(['user', 'authToken']);
-
+    await chrome.storage.local.remove(['user']);
     updateAuthUI(false);
-    document.getElementById('driveSection').style.display = 'none';
     showSuccess('Signed out successfully!');
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
   } catch (error) {
     console.error('Sign out failed:', error);
-    showSuccess('Sign out failed. Please try again.');
+    showError('Sign out failed. Please try again.');
   }
 }
 
@@ -91,13 +150,7 @@ function updateAuthUI(isLoggedIn) {
     notLoggedIn.style.display = 'none';
     loggedIn.style.display = 'block';
     
-    document.getElementById('userName').textContent = currentUser.name;
     document.getElementById('userEmail').textContent = currentUser.email;
-    
-    if (currentUser.picture) {
-      const avatar = document.getElementById('userAvatar');
-      avatar.innerHTML = `<img src="${currentUser.picture}" alt="${currentUser.name}">`;
-    }
 
     accountBtn.classList.add('logged-in');
   } else {
@@ -107,197 +160,46 @@ function updateAuthUI(isLoggedIn) {
   }
 }
 
-// Backup to Google Drive
-async function backupToGoogleDrive() {
-  if (!authToken) {
-    showSuccess('Please sign in first');
-    return;
-  }
+// Switch between login and signup tabs
+function switchAuthTab(tab) {
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
+  const loginTab = document.getElementById('loginTab');
+  const signupTab = document.getElementById('signupTab');
 
-  try {
-    const backupBtn = document.getElementById('backupNowBtn');
-    backupBtn.disabled = true;
-    backupBtn.textContent = 'Backing up...';
-
-    // Get all data
-    const data = await chrome.storage.local.get(['folders', 'activeFolderIndex']);
-    
-    const backupData = {
-      folders: data.folders || [],
-      activeFolderIndex: data.activeFolderIndex || 0,
-      timestamp: new Date().toISOString(),
-      version: '2.0.0'
-    };
-
-    const content = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([content], { type: 'application/json' });
-
-    // Check if backup file exists
-    const searchResponse = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=name='bookmark-organizer-backup.json' and trashed=false`,
-      {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      }
-    );
-
-    const searchData = await searchResponse.json();
-    let fileId = searchData.files && searchData.files.length > 0 ? searchData.files[0].id : null;
-
-    if (fileId) {
-      // Update existing file
-      await fetch(
-        `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: content
-        }
-      );
-    } else {
-      // Create new file
-      const metadata = {
-        name: 'bookmark-organizer-backup.json',
-        mimeType: 'application/json'
-      };
-
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', blob);
-
-      await fetch(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: form
-        }
-      );
-    }
-
-    // Update last backup time
-    const now = new Date().toLocaleString();
-    await chrome.storage.local.set({ lastBackupTime: now });
-    document.getElementById('lastBackupTime').textContent = now;
-
-    backupBtn.disabled = false;
-    backupBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/>
-        <line x1="12" y1="3" x2="12" y2="15"/>
-      </svg>
-      Backup Now
-    `;
-
-    showSuccess('Backup successful!');
-  } catch (error) {
-    console.error('Backup failed:', error);
-    showSuccess('Backup failed. Please try again.');
-    
-    const backupBtn = document.getElementById('backupNowBtn');
-    backupBtn.disabled = false;
-    backupBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/>
-        <line x1="12" y1="3" x2="12" y2="15"/>
-      </svg>
-      Backup Now
-    `;
+  if (tab === 'login') {
+    loginForm.style.display = 'block';
+    signupForm.style.display = 'none';
+    loginTab.classList.add('active');
+    signupTab.classList.remove('active');
+  } else {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
+    loginTab.classList.remove('active');
+    signupTab.classList.add('active');
   }
 }
 
-// Restore from Google Drive
-async function restoreFromGoogleDrive() {
-  if (!authToken) {
-    showSuccess('Please sign in first');
-    return;
+// Show error message
+function showError(message) {
+  const notLoggedIn = document.getElementById('notLoggedIn');
+  let errorDiv = notLoggedIn.querySelector('.auth-error');
+  
+  if (!errorDiv) {
+    errorDiv = document.createElement('div');
+    errorDiv.className = 'auth-error';
+    notLoggedIn.insertBefore(errorDiv, notLoggedIn.firstChild);
   }
-
-  if (!confirm('This will replace your current bookmarks. Continue?')) {
-    return;
-  }
-
-  try {
-    const restoreBtn = document.getElementById('restoreBtn');
-    restoreBtn.disabled = true;
-    restoreBtn.textContent = 'Restoring...';
-
-    // Search for backup file
-    const searchResponse = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=name='bookmark-organizer-backup.json' and trashed=false`,
-      {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      }
-    );
-
-    const searchData = await searchResponse.json();
-    
-    if (!searchData.files || searchData.files.length === 0) {
-      throw new Error('No backup found');
-    }
-
-    const fileId = searchData.files[0].id;
-
-    // Download file
-    const fileResponse = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-      {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      }
-    );
-
-    const backupData = await fileResponse.json();
-
-    // Restore data
-    await chrome.storage.local.set({
-      folders: backupData.folders,
-      activeFolderIndex: backupData.activeFolderIndex
-    });
-
-    // Reload UI
-    await loadData();
-    updateUI();
-
-    restoreBtn.disabled = false;
-    restoreBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      Restore from Drive
-    `;
-
-    showSuccess('Restore successful!');
-  } catch (error) {
-    console.error('Restore failed:', error);
-    showSuccess('Restore failed. ' + error.message);
-    
-    const restoreBtn = document.getElementById('restoreBtn');
-    restoreBtn.disabled = false;
-    restoreBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      Restore from Drive
-    `;
-  }
+  
+  errorDiv.textContent = message;
+  errorDiv.style.display = 'block';
+  
+  setTimeout(() => {
+    errorDiv.style.display = 'none';
+  }, 4000);
 }
 
+// Download backup file
 async function downloadBackupFile() {
   try {
     const downloadBtn = document.getElementById('downloadBackupBtn');
@@ -330,53 +232,68 @@ async function downloadBackupFile() {
       downloadBtn.disabled = false;
       downloadBtn.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 3v12"/>
-          <path d="M8 13l4 4 4-4"/>
-          <rect x="4" y="17" width="16" height="4" rx="2"/>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Download Backup
+        Export Bookmarks
       `;
     }
 
-    showSuccess('Backup downloaded successfully!');
+    showSuccess('Bookmarks exported successfully!');
   } catch (error) {
-    console.error('Download failed:', error);
-    showSuccess('Backup download failed. Please try again.');
+    console.error('Export failed:', error);
+    showError('Export failed. Please try again.');
     const downloadBtn = document.getElementById('downloadBackupBtn');
     if (downloadBtn) {
       downloadBtn.disabled = false;
       downloadBtn.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 3v12"/>
-          <path d="M8 13l4 4 4-4"/>
-          <rect x="4" y="17" width="16" height="4" rx="2"/>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Download Backup
+        Export Bookmarks
       `;
     }
   }
 }
 
-// Auto-backup toggle
-async function toggleAutoBackup(enabled) {
-  await chrome.storage.local.set({ autoBackup: enabled });
-  
-  if (enabled) {
-    showSuccess('Auto-backup enabled');
-  } else {
-    showSuccess('Auto-backup disabled');
+// Upload backup file
+async function uploadBackupFile(event) {
+  try {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const content = await file.text();
+    const backupData = JSON.parse(content);
+
+    if (!backupData.folders || !Array.isArray(backupData.folders)) {
+      showError('Invalid backup file format');
+      return;
+    }
+
+    if (!confirm('This will replace your current bookmarks. Continue?')) {
+      return;
+    }
+
+    // Restore data
+    await chrome.storage.local.set({
+      folders: backupData.folders,
+      activeFolderIndex: backupData.activeFolderIndex || 0
+    });
+
+    // Reset file input
+    event.target.value = '';
+
+    showSuccess('Bookmarks imported successfully!');
+    
+    // Reload the page to show updated data
+    location.reload();
+  } catch (error) {
+    console.error('Import failed:', error);
+    showError('Import failed. Please check the file format.');
+    event.target.value = '';
   }
 }
 
-// Load backup settings
-async function loadBackupSettings() {
-  const result = await chrome.storage.local.get(['lastBackupTime', 'autoBackup']);
-  
-  if (result.lastBackupTime) {
-    document.getElementById('lastBackupTime').textContent = result.lastBackupTime;
-  }
-  
-  if (result.autoBackup) {
-    document.getElementById('autoBackupToggle').checked = true;
-  }
-}
