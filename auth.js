@@ -183,10 +183,24 @@ function updateAuthUI(isLoggedIn) {
   }
 }
 
-// Switch between login and signup tabs (deprecated - keeping for compatibility)
+// Switch between login and signup forms
 function switchAuthTab(tab) {
-  // Tabs removed - both forms now show together
-  return;
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
+  
+  // Clear error messages when switching
+  const errorDiv = document.querySelector('.auth-error');
+  if (errorDiv) {
+    errorDiv.style.display = 'none';
+  }
+
+  if (tab === 'login') {
+    loginForm.style.display = 'block';
+    signupForm.style.display = 'none';
+  } else {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
+  }
 }
 
 // Show error message

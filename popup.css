@@ -1800,3 +1800,23 @@ body {
 .form-divider::after {
   right: 0;
 }
+
+.auth-link-text {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 12px;
+}
+
+.auth-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.auth-link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
