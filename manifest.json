@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "URL Manger",
+  "name": "Busket",
   "version": "2.0.0",
   "description": "Advanced bookmark organizer with domain grouping and smart organization",
   "permissions": [
@@ -8,6 +8,9 @@
     "tabs",
     "favicon"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; img-src 'self' https://api.qrserver.com data:;"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

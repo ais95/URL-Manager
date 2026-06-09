@@ -10,7 +10,7 @@ let selectedBookmarks = new Set();
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    console.log('🚀 ========== INITIALIZING URL MANGER ==========');
+    console.log('🚀 ========== INITIALIZING BUSKET ==========');
     
     console.log('⏳ Step 1: Loading current tab...');
     await loadCurrentTab();
@@ -570,6 +570,14 @@ function createLinkCard(link) {
           <line x1="12" y1="2" x2="12" y2="15"/>
         </svg>
       </button>
+      <button class="link-action-btn qr-link" title="Show QR">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+      </button>
       <div class="link-menu-wrapper">
         <button class="link-action-btn link-menu-btn" title="More actions">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -583,14 +591,6 @@ function createLinkCard(link) {
           <button class="link-menu-item delete-link-menu" type="button">Delete</button>
         </div>
       </div>
-      <button class="link-action-btn qr-link" title="Show QR">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <rect x="3" y="3" width="7" height="7"/>
-          <rect x="14" y="3" width="7" height="7"/>
-          <rect x="14" y="14" width="7" height="7"/>
-          <rect x="3" y="14" width="7" height="7"/>
-        </svg>
-      </button>
     </div>
   `;
   
@@ -729,6 +729,7 @@ function createLinkCard(link) {
     const qrBtn = div.querySelector('.qr-link');
     if (qrBtn) {
       qrBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
         const qrModal = document.getElementById('qrModal');
         const qrImage = document.getElementById('qrImage');
