@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "URL Manger",
+  "version": "2.0.0",
+  "description": "Advanced bookmark organizer with domain grouping and smart organization",
+  "permissions": [
+    "storage",
+    "tabs",
+    "favicon",
+    "identity"
+  ],
+  "oauth2": {
+    "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.file"
+    ]
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
