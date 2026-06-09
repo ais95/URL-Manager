@@ -77,6 +77,14 @@ async function signUp() {
     };
 
     await chrome.storage.local.set({ user: currentUser });
+    
+    // Clear forms
+    document.getElementById('signupEmail').value = '';
+    document.getElementById('signupPassword').value = '';
+    document.getElementById('signupConfirmPassword').value = '';
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    
     updateAuthUI(true);
     showSuccess('Account created and signed in successfully!');
     switchAuthTab('login');
@@ -117,6 +125,11 @@ async function login() {
     };
 
     await chrome.storage.local.set({ user: currentUser });
+    
+    // Clear form
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    
     updateAuthUI(true);
     showSuccess('Signed in successfully!');
   } catch (error) {
@@ -166,6 +179,12 @@ function switchAuthTab(tab) {
   const signupForm = document.getElementById('signupForm');
   const loginTab = document.getElementById('loginTab');
   const signupTab = document.getElementById('signupTab');
+  
+  // Clear error messages when switching tabs
+  const errorDiv = document.querySelector('.auth-error');
+  if (errorDiv) {
+    errorDiv.style.display = 'none';
+  }
 
   if (tab === 'login') {
     loginForm.style.display = 'block';

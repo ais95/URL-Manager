@@ -1017,15 +1017,12 @@ function setupEventListeners() {
   
   if (uploadBackupBtn) {
     uploadBackupBtn.addEventListener('click', () => {
-      document.getElementById('fileInput').click();
+      fileInput.click();
     });
   }
   
-  // Handle file import
-  const fileInput = document.getElementById('fileInput');
-  if (fileInput) {
-    fileInput.addEventListener('change', uploadBackupFile);
-  }
+  // Handle file import for backup uploads
+  fileInput.addEventListener('change', uploadBackupFile);
   
   // Lock Folder
   const lockFolderBtn = document.getElementById('lockFolderBtn');
