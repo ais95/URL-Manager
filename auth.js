@@ -87,7 +87,6 @@ async function signUp() {
     
     updateAuthUI(true);
     showSuccess('Account created and signed in successfully!');
-    switchAuthTab('login');
   } catch (error) {
     console.error('Sign up failed:', error);
     showError('Sign up failed. Please try again.');
@@ -158,6 +157,7 @@ function updateAuthUI(isLoggedIn) {
   const notLoggedIn = document.getElementById('notLoggedIn');
   const loggedIn = document.getElementById('loggedIn');
   const accountBtn = document.getElementById('accountBtn');
+  const backupSection = document.getElementById('backupSection');
 
   if (isLoggedIn && currentUser) {
     notLoggedIn.style.display = 'none';
@@ -166,37 +166,27 @@ function updateAuthUI(isLoggedIn) {
     document.getElementById('userEmail').textContent = currentUser.email;
 
     accountBtn.classList.add('logged-in');
+    
+    // Show backup section only when logged in
+    if (backupSection) {
+      backupSection.style.display = 'block';
+    }
   } else {
     notLoggedIn.style.display = 'block';
     loggedIn.style.display = 'none';
     accountBtn.classList.remove('logged-in');
+    
+    // Hide backup section when not logged in
+    if (backupSection) {
+      backupSection.style.display = 'none';
+    }
   }
 }
 
-// Switch between login and signup tabs
+// Switch between login and signup tabs (deprecated - keeping for compatibility)
 function switchAuthTab(tab) {
-  const loginForm = document.getElementById('loginForm');
-  const signupForm = document.getElementById('signupForm');
-  const loginTab = document.getElementById('loginTab');
-  const signupTab = document.getElementById('signupTab');
-  
-  // Clear error messages when switching tabs
-  const errorDiv = document.querySelector('.auth-error');
-  if (errorDiv) {
-    errorDiv.style.display = 'none';
-  }
-
-  if (tab === 'login') {
-    loginForm.style.display = 'block';
-    signupForm.style.display = 'none';
-    loginTab.classList.add('active');
-    signupTab.classList.remove('active');
-  } else {
-    loginForm.style.display = 'none';
-    signupForm.style.display = 'block';
-    loginTab.classList.remove('active');
-    signupTab.classList.add('active');
-  }
+  // Tabs removed - both forms now show together
+  return;
 }
 
 // Show error message

@@ -1773,3 +1773,30 @@ body {
   font-weight: 500;
   margin-bottom: 12px;
 }
+
+.form-divider {
+  text-align: center;
+  margin: 16px 0;
+  color: var(--text-light);
+  font-size: 12px;
+  font-weight: 500;
+  position: relative;
+}
+
+.form-divider::before,
+.form-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 35%;
+  height: 1px;
+  background: var(--border);
+}
+
+.form-divider::before {
+  left: 0;
+}
+
+.form-divider::after {
+  right: 0;
+}
